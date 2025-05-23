@@ -17,7 +17,7 @@ type Client struct {
 	httpClient *http.Client
 }
 
-func NewClient(mirakurunUrl string) (*Client, error) {
+func NewClient(mirakurunUrl string, requestTimeout int) (*Client, error) {
 	if mirakurunUrl == "" {
 		return nil, fmt.Errorf("mirakurun url is empty")
 	}
@@ -28,7 +28,7 @@ func NewClient(mirakurunUrl string) (*Client, error) {
 
 	client := &Client{
 		URL:        mirakurunUrl,
-		httpClient: &http.Client{},
+		httpClient: &http.Client{Timeout: time.Duration(requestTimeout) * time.Second},
 	}
 
 	return client, nil

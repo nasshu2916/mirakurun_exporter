@@ -26,7 +26,11 @@ Flags:
       --[no-]collector.version   Enable the version collector (default: disabled).
       --addr=":8080"             Listen address for web server
       --mirakurun.url="http://localhost:40772"  
-                                 Mirakurun API URL
+                                 Mirakurun URL
+      --mirakurun.request.timeout=5  
+                                 Mirakurun request timeout in seconds
+      --[no-]collector.disable-defaults  
+                                 Set all collectors to disabled by default.
       --log.level=info           Only log messages with the given severity or above. One of: [debug, info, warn, error]
       --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
       --[no-]version             Show application version.

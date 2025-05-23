@@ -20,8 +20,9 @@ const (
 )
 
 var (
-	factories      = make(map[string]func(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector)
-	collectorState = make(map[string]*bool)
+	factories        = make(map[string]func(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector)
+	collectorState   = make(map[string]*bool)
+	forcedCollectors = make(map[string]bool)
 )
 
 var (
@@ -61,10 +62,25 @@ func registerCollector(collector string, isDefaultEnabled bool, factory func(ctx
 	flagHelp := fmt.Sprintf("Enable the %s collector (default: %s).", collector, helpDefaultState)
 	defaultValue := fmt.Sprintf("%v", isDefaultEnabled)
 
-	flag := kingpin.Flag(flagName, flagHelp).Default(defaultValue).Bool()
+	flag := kingpin.Flag(flagName, flagHelp).Default(defaultValue).Action(collectorFlagAction(collector)).Bool()
 
 	collectorState[collector] = flag
 	factories[collector] = factory
+}
+
+func DisableDefaultCollectors() {
+	for c := range collectorState {
+		if _, ok := forcedCollectors[c]; !ok {
+			*collectorState[c] = false
+		}
+	}
+}
+
+func collectorFlagAction(collector string) func(ctx *kingpin.ParseContext) error {
+	return func(ctx *kingpin.ParseContext) error {
+		forcedCollectors[collector] = true
+		return nil
+	}
 }
 
 func MetricsHandler(client *mirakurun.Client, logger *slog.Logger) http.HandlerFunc {

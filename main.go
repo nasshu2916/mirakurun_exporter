@@ -16,8 +16,10 @@ import (
 )
 
 var (
-	addr         = kingpin.Flag("addr", "Listen address for web server").Default(":8080").String()
-	mirakurunUrl = kingpin.Flag("mirakurun.url", "Mirakurun API URL").Default("http://localhost:40772").String()
+	addr                     = kingpin.Flag("addr", "Listen address for web server").Default(":8080").String()
+	mirakurunUrl             = kingpin.Flag("mirakurun.url", "Mirakurun URL").Default("http://localhost:40772").String()
+	mirakurunRequestTimeout  = kingpin.Flag("mirakurun.request.timeout", "Mirakurun request timeout in seconds").Default("5").Int()
+	disableDefaultCollectors = kingpin.Flag("collector.disable-defaults", "Set all collectors to disabled by default.").Default("false").Bool()
 )
 
 func main() {
@@ -30,10 +32,14 @@ func main() {
 
 	logger := promslog.New(promslogConfig)
 
+	if *disableDefaultCollectors {
+		collector.DisableDefaultCollectors()
+	}
+
 	logger.Info("Starting mirakurun_exporter", "version", version.Info())
 	logger.Info("Build context", "build_context", version.BuildContext())
 
-	client, err := mirakurun.NewClient(*mirakurunUrl)
+	client, err := mirakurun.NewClient(*mirakurunUrl, *mirakurunRequestTimeout)
 	if err != nil {
 		fmt.Println("Error creating client:", err)
 		os.Exit(1)
