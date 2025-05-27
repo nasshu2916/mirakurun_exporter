@@ -11,7 +11,7 @@ $ mirakurun_exporter --mirakurun.url http://localhost:40772 --addr :8080
 
 To see all available configuration flags:
 ```sh
-$ ./mirakurun_exporter -h                                                                                                                                                                                                                                                                                                                                   (git)-[master]
+$ ./mirakurun_exporter -h
 usage: mirakurun_exporter [<flags>]
 
 
