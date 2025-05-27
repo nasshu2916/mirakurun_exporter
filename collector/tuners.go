@@ -2,11 +2,12 @@ package collector
 
 import (
 	"context"
-	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
-	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"strconv"
 	"strings"
+
+	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type tunerCollector struct {
@@ -26,7 +27,7 @@ type tunerCollector struct {
 }
 
 func init() {
-	registerCollector("Tuners", defaultEnabled, newTunerCollector)
+	registerCollector("tuners", defaultEnabled, newTunerCollector)
 }
 
 func newTunerCollector(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector {

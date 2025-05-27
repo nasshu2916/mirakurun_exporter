@@ -22,7 +22,7 @@ Flags:
       --[no-]collector.programs  Enable the programs collector (default: enabled).
       --[no-]collector.service   Enable the service collector (default: enabled).
       --[no-]collector.status    Enable the status collector (default: enabled).
-      --[no-]collector.Tuners    Enable the Tuners collector (default: enabled).
+      --[no-]collector.tuners    Enable the tuners collector (default: enabled).
       --[no-]collector.version   Enable the version collector (default: disabled).
       --addr=":8080"             Listen address for web server
       --mirakurun.url="http://localhost:40772"  
