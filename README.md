@@ -35,3 +35,10 @@ Flags:
       --log.format=logfmt        Output format of log messages. One of: [logfmt, json]
       --[no-]version             Show application version.
 ```
+
+## Grafana
+
+Metrics collected by the exporter can be visualized in a Grafana dashboard.
+`grafana.json` is a sample dashboard that can be imported into Grafana.
+
+<img alt="mirakurun-grafana" src="https://github.com/user-attachments/assets/24f90be3-54a4-4588-8e4b-5853b49caa4f" />
