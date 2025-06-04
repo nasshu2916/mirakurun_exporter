@@ -25,6 +25,8 @@ var (
 	factories        = make(map[string]CollectorFactory)
 	collectorState   = make(map[string]*bool)
 	forcedCollectors = make(map[string]bool)
+
+	enableScrapeCollector = kingpin.Flag("collector.scrape", "Enable the scrape collector (default: true).").Default("true").Bool()
 )
 
 var (
@@ -146,8 +148,10 @@ func executeCollect(name string, c Collector, ch chan<- prometheus.Metric, logge
 		logger.Debug("collector succeeded", "name", name, "duration_seconds", duration.Seconds())
 		success = 1
 	}
-	ch <- prometheus.MustNewConstMetric(scrapeDurationDesc, prometheus.GaugeValue, duration.Seconds(), name)
-	ch <- prometheus.MustNewConstMetric(scrapeSuccessDesc, prometheus.GaugeValue, success, name)
+	if *enableScrapeCollector {
+		ch <- prometheus.MustNewConstMetric(scrapeDurationDesc, prometheus.GaugeValue, duration.Seconds(), name)
+		ch <- prometheus.MustNewConstMetric(scrapeSuccessDesc, prometheus.GaugeValue, success, name)
+	}
 }
 
 func boolToFloat64(b bool) float64 {

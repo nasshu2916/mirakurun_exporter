@@ -17,6 +17,7 @@ usage: mirakurun_exporter [<flags>]
 
 Flags:
   -h, --[no-]help                Show context-sensitive help (also try --help-long and --help-man).
+      --[no-]collector.scrape    Enable the scrape collector (default: true).
       --[no-]collector.channel   Enable the channel collector (default: enabled).
       --[no-]collector.jobs      Enable the jobs collector (default: enabled).
       --[no-]collector.programs  Enable the programs collector (default: enabled).
