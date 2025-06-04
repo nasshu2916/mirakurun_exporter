@@ -19,8 +19,10 @@ const (
 	defaultDisabled = false
 )
 
+type CollectorFactory func(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector
+
 var (
-	factories        = make(map[string]func(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector)
+	factories        = make(map[string]CollectorFactory)
 	collectorState   = make(map[string]*bool)
 	forcedCollectors = make(map[string]bool)
 )
@@ -50,7 +52,7 @@ type MirakurunCollector struct {
 	logger     *slog.Logger
 }
 
-func registerCollector(collector string, isDefaultEnabled bool, factory func(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector) {
+func registerCollector(collector string, isDefaultEnabled bool, factory CollectorFactory) {
 	var helpDefaultState string
 	if isDefaultEnabled {
 		helpDefaultState = "enabled"
