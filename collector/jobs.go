@@ -2,22 +2,25 @@ package collector
 
 import (
 	"context"
-	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
-	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
+
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
 )
+
+type jobsGetter interface {
+	GetJobs(ctx context.Context, logger *slog.Logger) (*mirakurun.JobsResponse, error)
+}
 
 type jobsCollector struct {
 	ctx    context.Context
-	client *mirakurun.Client
 	logger *slog.Logger
 
-	jobCount        *prometheus.Desc
-	retryJobCount   *prometheus.Desc
-	abortJobCount   *prometheus.Desc
-	skippedJobCount *prometheus.Desc
-	failedJobCount  *prometheus.Desc
-	durationAvg     *prometheus.Desc
+	jobsGetter jobsGetter
+
+	metrics     map[string]*prometheus.Desc
+	metricTypes map[string]prometheus.ValueType
 }
 
 func init() {
@@ -27,61 +30,69 @@ func init() {
 func newJobsCollector(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector {
 	const subsystem = "jobs"
 
-	return &jobsCollector{
-		ctx:    ctx,
-		client: client,
-		logger: logger,
+	metricDefs := map[string]metricDefinition{
+		"count": {
+			name:       "count",
+			help:       "Count of jobs",
+			labelNames: []string{"status"},
+			metricType: prometheus.GaugeValue,
+		},
+		"retry_count": {
+			name:       "retry_count",
+			help:       "Count of retried jobs",
+			metricType: prometheus.GaugeValue,
+		},
+		"abort_count": {
+			name:       "abort_count",
+			help:       "Count of aborted jobs",
+			metricType: prometheus.GaugeValue,
+		},
+		"skipped_count": {
+			name:       "skipped_count",
+			help:       "Count of skipped jobs",
+			metricType: prometheus.GaugeValue,
+		},
+		"failed_count": {
+			name:       "failed_count",
+			help:       "Count of failed jobs",
+			metricType: prometheus.GaugeValue,
+		},
+		"duration_avg": {
+			name:       "duration_avg",
+			help:       "Average duration of jobs",
+			metricType: prometheus.GaugeValue,
+		},
+	}
 
-		jobCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "count"),
-			"Count of jobs",
-			[]string{"status"},
+	metrics := make(map[string]*prometheus.Desc)
+	metricTypes := make(map[string]prometheus.ValueType)
+	for name, def := range metricDefs {
+		metrics[name] = prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, def.name),
+			def.help,
+			def.labelNames,
 			nil,
-		),
-		retryJobCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "retry_count"),
-			"Count of retried jobs",
-			nil,
-			nil,
-		),
-		abortJobCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "abort_count"),
-			"Count of aborted jobs",
-			nil,
-			nil,
-		),
-		skippedJobCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "skipped_count"),
-			"Count of skipped jobs",
-			nil,
-			nil,
-		),
-		failedJobCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "failed_count"),
-			"Count of failed jobs",
-			nil,
-			nil,
-		),
-		durationAvg: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "duration_avg"),
-			"Average duration of jobs",
-			nil,
-			nil,
-		),
+		)
+		metricTypes[name] = def.metricType
+	}
+
+	return &jobsCollector{
+		ctx:         ctx,
+		jobsGetter:  client,
+		logger:      logger,
+		metrics:     metrics,
+		metricTypes: metricTypes,
 	}
 }
 
 func (c *jobsCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.jobCount
-	ch <- c.retryJobCount
-	ch <- c.abortJobCount
-	ch <- c.skippedJobCount
-	ch <- c.failedJobCount
-	ch <- c.durationAvg
+	for _, desc := range c.metrics {
+		ch <- desc
+	}
 }
 
 func (c *jobsCollector) Collect(ch chan<- prometheus.Metric) error {
-	jobs, err := c.client.GetJobs(c.ctx, c.logger)
+	jobs, err := c.jobsGetter.GetJobs(c.ctx, c.logger)
 	if err != nil {
 		return err
 	}
@@ -106,45 +117,48 @@ func (c *jobsCollector) Collect(ch chan<- prometheus.Metric) error {
 			finishedCount++
 		}
 	}
+
 	for status, count := range jobCount {
 		ch <- prometheus.MustNewConstMetric(
-			c.jobCount,
-			prometheus.GaugeValue,
+			c.metrics["count"],
+			c.metricTypes["count"],
 			float64(count),
 			status,
 		)
 	}
+
 	ch <- prometheus.MustNewConstMetric(
-		c.retryJobCount,
-		prometheus.GaugeValue,
+		c.metrics["retry_count"],
+		c.metricTypes["retry_count"],
 		float64(retryCount),
 	)
+
 	ch <- prometheus.MustNewConstMetric(
-		c.abortJobCount,
-		prometheus.GaugeValue,
+		c.metrics["abort_count"],
+		c.metricTypes["abort_count"],
 		float64(abortCount),
 	)
+
 	ch <- prometheus.MustNewConstMetric(
-		c.skippedJobCount,
-		prometheus.GaugeValue,
+		c.metrics["skipped_count"],
+		c.metricTypes["skipped_count"],
 		float64(skippedCount),
 	)
+
 	ch <- prometheus.MustNewConstMetric(
-		c.failedJobCount,
-		prometheus.GaugeValue,
+		c.metrics["failed_count"],
+		c.metricTypes["failed_count"],
 		float64(failedCount),
 	)
 
 	var duration float64
-
 	if finishedCount > 0 {
 		duration = float64(durationSum) / float64(finishedCount)
-	} else {
-		duration = 0
 	}
+
 	ch <- prometheus.MustNewConstMetric(
-		c.durationAvg,
-		prometheus.GaugeValue,
+		c.metrics["duration_avg"],
+		c.metricTypes["duration_avg"],
 		duration,
 	)
 

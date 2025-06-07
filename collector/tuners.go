@@ -6,24 +6,23 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
 )
+
+type tunersGetter interface {
+	GetTuners(ctx context.Context, logger *slog.Logger) (*mirakurun.TunersResponse, error)
+}
 
 type tunerCollector struct {
 	ctx    context.Context
-	client *mirakurun.Client
 	logger *slog.Logger
 
-	tunerDevice     *prometheus.Desc
-	availableTuners *prometheus.Desc
-	remoteTuners    *prometheus.Desc
-	freeTuners      *prometheus.Desc
-	usingTuners     *prometheus.Desc
-	faultTuners     *prometheus.Desc
-	users           *prometheus.Desc
-	streamPackets   *prometheus.Desc
-	streamDrops     *prometheus.Desc
+	tunersGetter tunersGetter
+
+	metrics     map[string]*prometheus.Desc
+	metricTypes map[string]prometheus.ValueType
 }
 
 func init() {
@@ -33,82 +32,92 @@ func init() {
 func newTunerCollector(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector {
 	const subsystem = "tuners"
 
-	return &tunerCollector{
-		ctx:    ctx,
-		client: client,
-		logger: logger,
+	metricDefs := map[string]metricDefinition{
+		"device": {
+			name:       "device",
+			help:       "Tuner device information",
+			labelNames: []string{"index", "name", "type"},
+			metricType: prometheus.GaugeValue,
+		},
+		"available_tuner": {
+			name:       "available_tuner",
+			help:       "Available tuner device",
+			labelNames: []string{"index"},
+			metricType: prometheus.GaugeValue,
+		},
+		"remote_tuner": {
+			name:       "remote_tuner",
+			help:       "Remote tuner device",
+			labelNames: []string{"index"},
+			metricType: prometheus.GaugeValue,
+		},
+		"free_tuner": {
+			name:       "free_tuner",
+			help:       "Tuner device is free",
+			labelNames: []string{"index"},
+			metricType: prometheus.GaugeValue,
+		},
+		"using_tuner": {
+			name:       "using_tuner",
+			help:       "Tuner device is using",
+			labelNames: []string{"index"},
+			metricType: prometheus.GaugeValue,
+		},
+		"fault_tuner": {
+			name:       "fault_tuner",
+			help:       "Tuner device is fault",
+			labelNames: []string{"index"},
+			metricType: prometheus.GaugeValue,
+		},
+		"users": {
+			name:       "users",
+			help:       "User using tuner device",
+			labelNames: []string{"index", "user_id", "agent"},
+			metricType: prometheus.GaugeValue,
+		},
+		"stream_packets": {
+			name:       "stream_packets",
+			help:       "Stream packets by user",
+			labelNames: []string{"user_id"},
+			metricType: prometheus.CounterValue,
+		},
+		"stream_drops": {
+			name:       "stream_drops",
+			help:       "Stream drops packets by user",
+			labelNames: []string{"user_id"},
+			metricType: prometheus.CounterValue,
+		},
+	}
 
-		tunerDevice: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "device"),
-			"",
-			[]string{"index", "name", "type"},
+	metrics := make(map[string]*prometheus.Desc)
+	metricTypes := make(map[string]prometheus.ValueType)
+	for name, def := range metricDefs {
+		metrics[name] = prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, def.name),
+			def.help,
+			def.labelNames,
 			nil,
-		),
-		availableTuners: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "available_tuner"),
-			"available tuner device",
-			[]string{"index"},
-			nil,
-		),
-		remoteTuners: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "remote_tuner"),
-			"remote tuner device",
-			[]string{"index"},
-			nil,
-		),
-		freeTuners: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "free_tuner"),
-			"tuner device is free",
-			[]string{"index"},
-			nil,
-		),
-		usingTuners: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "using_tuner"),
-			"tuner device is using",
-			[]string{"index"},
-			nil,
-		),
-		faultTuners: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "fault_tuner"),
-			"tuner device is fault",
-			[]string{"index"},
-			nil,
-		),
-		users: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "users"),
-			"user using tuner device",
-			[]string{"index", "user_id", "agent"},
-			nil,
-		),
-		streamPackets: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "stream_packets"),
-			"stream packets by user",
-			[]string{"user_id"},
-			nil,
-		),
-		streamDrops: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "stream_drops"),
-			"stream drops packets by user",
-			[]string{"user_id"},
-			nil,
-		),
+		)
+		metricTypes[name] = def.metricType
+	}
+
+	return &tunerCollector{
+		ctx:          ctx,
+		tunersGetter: client,
+		logger:       logger,
+		metrics:      metrics,
+		metricTypes:  metricTypes,
 	}
 }
 
 func (c *tunerCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.tunerDevice
-	ch <- c.availableTuners
-	ch <- c.remoteTuners
-	ch <- c.freeTuners
-	ch <- c.usingTuners
-	ch <- c.faultTuners
-	ch <- c.users
-	ch <- c.streamPackets
-	ch <- c.streamDrops
+	for _, desc := range c.metrics {
+		ch <- desc
+	}
 }
 
 func (c *tunerCollector) Collect(ch chan<- prometheus.Metric) error {
-	tuners, err := c.client.GetTuners(c.ctx, c.logger)
+	tuners, err := c.tunersGetter.GetTuners(c.ctx, c.logger)
 	if err != nil {
 		return err
 	}
@@ -116,45 +125,45 @@ func (c *tunerCollector) Collect(ch chan<- prometheus.Metric) error {
 	for _, tuner := range *tuners {
 		index := strconv.Itoa(tuner.Index)
 		ch <- prometheus.MustNewConstMetric(
-			c.tunerDevice,
-			prometheus.GaugeValue,
+			c.metrics["device"],
+			c.metricTypes["device"],
 			1,
 			index, tuner.Name, strings.Join(tuner.Types, ","),
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.availableTuners,
-			prometheus.GaugeValue,
+			c.metrics["available_tuner"],
+			c.metricTypes["available_tuner"],
 			boolToFloat64(tuner.IsAvailable),
 			index,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.remoteTuners,
-			prometheus.GaugeValue,
+			c.metrics["remote_tuner"],
+			c.metricTypes["remote_tuner"],
 			boolToFloat64(tuner.IsRemote),
 			index,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.freeTuners,
-			prometheus.GaugeValue,
+			c.metrics["free_tuner"],
+			c.metricTypes["free_tuner"],
 			boolToFloat64(tuner.IsFree),
 			index,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.usingTuners,
-			prometheus.GaugeValue,
+			c.metrics["using_tuner"],
+			c.metricTypes["using_tuner"],
 			boolToFloat64(tuner.IsUsing),
 			index,
 		)
 		ch <- prometheus.MustNewConstMetric(
-			c.faultTuners,
-			prometheus.GaugeValue,
+			c.metrics["fault_tuner"],
+			c.metricTypes["fault_tuner"],
 			boolToFloat64(tuner.IsFault),
 			index,
 		)
 		for _, user := range tuner.Users {
 			ch <- prometheus.MustNewConstMetric(
-				c.users,
-				prometheus.GaugeValue,
+				c.metrics["users"],
+				c.metricTypes["users"],
 				1,
 				index, user.ID, user.Agent,
 			)
@@ -170,14 +179,14 @@ func (c *tunerCollector) Collect(ch chan<- prometheus.Metric) error {
 			}
 
 			ch <- prometheus.MustNewConstMetric(
-				c.streamPackets,
-				prometheus.CounterValue,
+				c.metrics["stream_packets"],
+				c.metricTypes["stream_packets"],
 				float64(streamPackets),
 				user.ID,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				c.streamDrops,
-				prometheus.CounterValue,
+				c.metrics["stream_drops"],
+				c.metricTypes["stream_drops"],
 				float64(streamDrops),
 				user.ID,
 			)

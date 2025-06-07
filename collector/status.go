@@ -2,25 +2,25 @@ package collector
 
 import (
 	"context"
-	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
-	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
+
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
 )
+
+type statusGetter interface {
+	GetStatus(ctx context.Context, logger *slog.Logger) (*mirakurun.StatusResponse, error)
+}
 
 type statusCollector struct {
 	ctx    context.Context
-	client *mirakurun.Client
 	logger *slog.Logger
 
-	version             *prometheus.Desc
-	process             *prometheus.Desc
-	memoryUsage         *prometheus.Desc
-	epgStoredEventCount *prometheus.Desc
-	streamCount         *prometheus.Desc
-	errorCount          *prometheus.Desc
-	timerAccuracyM1     *prometheus.Desc
-	timerAccuracyM5     *prometheus.Desc
-	timerAccuracyM15    *prometheus.Desc
+	statusGetter statusGetter
+
+	metrics     map[string]*prometheus.Desc
+	metricTypes map[string]prometheus.ValueType
 }
 
 func init() {
@@ -30,207 +30,187 @@ func init() {
 func newStatusCollector(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector {
 	const subsystem = "status"
 
-	return &statusCollector{
-		ctx:    ctx,
-		client: client,
-		logger: logger,
+	metricDefs := map[string]metricDefinition{
+		"version": {
+			name:       "version",
+			help:       "Version of Mirakurun",
+			labelNames: []string{"mirakurun", "node"},
+			metricType: prometheus.GaugeValue,
+		},
+		"process": {
+			name:       "process",
+			help:       "Process information of Mirakurun",
+			labelNames: []string{"arch", "platform"},
+			metricType: prometheus.GaugeValue,
+		},
+		"memory_usage": {
+			name:       "memory_usage",
+			help:       "Memory usage of Mirakurun",
+			labelNames: []string{"type"},
+			metricType: prometheus.GaugeValue,
+		},
+		"epg_stored_events": {
+			name:       "epg_stored_events",
+			help:       "Count of stored EPG events",
+			metricType: prometheus.GaugeValue,
+		},
+		"stream_count": {
+			name:       "stream_count",
+			help:       "Count of streams",
+			labelNames: []string{"type"},
+			metricType: prometheus.GaugeValue,
+		},
+		"error_count": {
+			name:       "error_count",
+			help:       "Count of errors",
+			labelNames: []string{"type"},
+			metricType: prometheus.CounterValue,
+		},
+		"timer_accuracy_m1": {
+			name:       "timer_accuracy_m1",
+			help:       "Timer accuracy for 1 minute",
+			labelNames: []string{"type"},
+			metricType: prometheus.GaugeValue,
+		},
+		"timer_accuracy_m5": {
+			name:       "timer_accuracy_m5",
+			help:       "Timer accuracy for 5 minutes",
+			labelNames: []string{"type"},
+			metricType: prometheus.GaugeValue,
+		},
+		"timer_accuracy_m15": {
+			name:       "timer_accuracy_m15",
+			help:       "Timer accuracy for 15 minutes",
+			labelNames: []string{"type"},
+			metricType: prometheus.GaugeValue,
+		},
+	}
 
-		version: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "version"),
-			"Version of Mirakurun",
-			[]string{"mirakurun", "node"},
+	metrics := make(map[string]*prometheus.Desc)
+	metricTypes := make(map[string]prometheus.ValueType)
+	for name, def := range metricDefs {
+		metrics[name] = prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, subsystem, def.name),
+			def.help,
+			def.labelNames,
 			nil,
-		),
-		process: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "process"),
-			"Process information of Mirakurun",
-			[]string{"arch", "platform"},
-			nil,
-		),
-		memoryUsage: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "memory_usage"),
-			"Memory usage of Mirakurun",
-			[]string{"type"},
-			nil,
-		),
-		epgStoredEventCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "epg_stored_events"),
-			"Count of stored EPG events",
-			nil,
-			nil,
-		),
-		streamCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "stream_count"),
-			"Count of streams",
-			[]string{"type"},
-			nil,
-		),
-		errorCount: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "error_count"),
-			"Count of errors",
-			[]string{"type"},
-			nil,
-		),
-		timerAccuracyM1: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "timer_accuracy_m1"),
-			"Timer accuracy for 1 minute",
-			[]string{"type"},
-			nil,
-		),
-		timerAccuracyM5: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "timer_accuracy_m5"),
-			"Timer accuracy for 5 minutes",
-			[]string{"type"},
-			nil,
-		),
-		timerAccuracyM15: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, subsystem, "timer_accuracy_m15"),
-			"Timer accuracy for 15 minutes",
-			[]string{"type"},
-			nil,
-		),
+		)
+		metricTypes[name] = def.metricType
+	}
+
+	return &statusCollector{
+		ctx:          ctx,
+		statusGetter: client,
+		logger:       logger,
+		metrics:      metrics,
+		metricTypes:  metricTypes,
 	}
 }
 
 func (c *statusCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- c.version
-	ch <- c.process
-	ch <- c.memoryUsage
-	ch <- c.epgStoredEventCount
-	ch <- c.streamCount
-	ch <- c.errorCount
-	ch <- c.timerAccuracyM1
-	ch <- c.timerAccuracyM5
-	ch <- c.timerAccuracyM15
+	for _, desc := range c.metrics {
+		ch <- desc
+	}
 }
 
 func (c *statusCollector) Collect(ch chan<- prometheus.Metric) error {
-	status, err := c.client.GetStatus(c.ctx, c.logger)
+	status, err := c.statusGetter.GetStatus(c.ctx, c.logger)
 	if err != nil {
 		return err
 	}
 
+	// Version metrics
 	ch <- prometheus.MustNewConstMetric(
-		c.version,
-		prometheus.GaugeValue,
+		c.metrics["version"],
+		c.metricTypes["version"],
 		1,
 		status.Version, status.Process.Versions["node"],
 	)
+
+	// Process metrics
 	ch <- prometheus.MustNewConstMetric(
-		c.process,
-		prometheus.GaugeValue,
+		c.metrics["process"],
+		c.metricTypes["process"],
 		1,
 		status.Process.Arch, status.Process.Platform,
 	)
+
+	// Memory usage metrics
+	memoryTypes := map[string]float64{
+		"RSS":          float64(status.Process.MemoryUsage.RSS),
+		"HeapTotal":    float64(status.Process.MemoryUsage.HeapTotal),
+		"HeapUsed":     float64(status.Process.MemoryUsage.HeapUsed),
+		"External":     float64(status.Process.MemoryUsage.External),
+		"ArrayBuffers": float64(status.Process.MemoryUsage.ArrayBuffers),
+	}
+	for memType, value := range memoryTypes {
+		ch <- prometheus.MustNewConstMetric(
+			c.metrics["memory_usage"],
+			c.metricTypes["memory_usage"],
+			value,
+			memType,
+		)
+	}
+
+	// EPG metrics
 	ch <- prometheus.MustNewConstMetric(
-		c.memoryUsage,
-		prometheus.GaugeValue,
-		float64(status.Process.MemoryUsage.RSS),
-		"RSS",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.memoryUsage,
-		prometheus.GaugeValue,
-		float64(status.Process.MemoryUsage.HeapTotal),
-		"HeapTotal",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.memoryUsage,
-		prometheus.GaugeValue,
-		float64(status.Process.MemoryUsage.HeapUsed),
-		"HeapUsed",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.memoryUsage,
-		prometheus.GaugeValue,
-		float64(status.Process.MemoryUsage.External),
-		"External",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.memoryUsage,
-		prometheus.GaugeValue,
-		float64(status.Process.MemoryUsage.ArrayBuffers),
-		"ArrayBuffers",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.epgStoredEventCount,
-		prometheus.GaugeValue,
+		c.metrics["epg_stored_events"],
+		c.metricTypes["epg_stored_events"],
 		float64(status.EPG.StoredEvents),
 	)
-	ch <- prometheus.MustNewConstMetric(
-		c.streamCount,
-		prometheus.GaugeValue,
-		float64(status.StreamCount.TunerDevice),
-		"TunerDevice",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.streamCount,
-		prometheus.GaugeValue,
-		float64(status.StreamCount.TSFilter),
-		"TSFilter",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.streamCount,
-		prometheus.GaugeValue,
-		float64(status.StreamCount.Decoder),
-		"Decoder",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.errorCount,
-		prometheus.CounterValue,
-		float64(status.ErrorCount.UncaughtException),
-		"UncaughtException",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.errorCount,
-		prometheus.CounterValue,
-		float64(status.ErrorCount.UnhandledRejection),
-		"UnhandledRejection",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.errorCount,
-		prometheus.CounterValue,
-		float64(status.ErrorCount.BufferOverflow),
-		"BufferOverflow",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.errorCount,
-		prometheus.CounterValue,
-		float64(status.ErrorCount.TunerDeviceRespawn),
-		"TunerDeviceRespawn",
-	)
-	ch <- prometheus.MustNewConstMetric(
-		c.errorCount,
-		prometheus.CounterValue,
-		float64(status.ErrorCount.DecoderRespawn),
-		"DecoderRespawn",
-	)
 
-	for _, field := range []string{"avg", "min", "max"} {
+	// Stream count metrics
+	streamTypes := map[string]float64{
+		"TunerDevice": float64(status.StreamCount.TunerDevice),
+		"TSFilter":    float64(status.StreamCount.TSFilter),
+		"Decoder":     float64(status.StreamCount.Decoder),
+	}
+	for streamType, value := range streamTypes {
 		ch <- prometheus.MustNewConstMetric(
-			c.timerAccuracyM1,
-			prometheus.GaugeValue,
-			status.TimerAccuracy.M1.GetValue(field),
-			field,
+			c.metrics["stream_count"],
+			c.metricTypes["stream_count"],
+			value,
+			streamType,
 		)
 	}
 
-	for _, field := range []string{"avg", "min", "max"} {
+	// Error count metrics
+	errorTypes := map[string]float64{
+		"UncaughtException":  float64(status.ErrorCount.UncaughtException),
+		"UnhandledRejection": float64(status.ErrorCount.UnhandledRejection),
+		"BufferOverflow":     float64(status.ErrorCount.BufferOverflow),
+		"TunerDeviceRespawn": float64(status.ErrorCount.TunerDeviceRespawn),
+		"DecoderRespawn":     float64(status.ErrorCount.DecoderRespawn),
+	}
+	for errorType, value := range errorTypes {
 		ch <- prometheus.MustNewConstMetric(
-			c.timerAccuracyM5,
-			prometheus.GaugeValue,
-			status.TimerAccuracy.M5.GetValue(field),
-			field,
+			c.metrics["error_count"],
+			c.metricTypes["error_count"],
+			value,
+			errorType,
 		)
 	}
 
-	for _, field := range []string{"avg", "min", "max"} {
-		ch <- prometheus.MustNewConstMetric(
-			c.timerAccuracyM15,
-			prometheus.GaugeValue,
-			status.TimerAccuracy.M15.GetValue(field),
-			field,
-		)
+	// Timer accuracy metrics
+	timerFields := []string{"avg", "min", "max"}
+	timerPeriods := map[string]struct {
+		metric string
+		value  func(string) float64
+	}{
+		"M1":  {metric: "timer_accuracy_m1", value: status.TimerAccuracy.M1.GetValue},
+		"M5":  {metric: "timer_accuracy_m5", value: status.TimerAccuracy.M5.GetValue},
+		"M15": {metric: "timer_accuracy_m15", value: status.TimerAccuracy.M15.GetValue},
+	}
+
+	for _, data := range timerPeriods {
+		for _, field := range timerFields {
+			ch <- prometheus.MustNewConstMetric(
+				c.metrics[data.metric],
+				c.metricTypes[data.metric],
+				data.value(field),
+				field,
+			)
+		}
 	}
 
 	return nil

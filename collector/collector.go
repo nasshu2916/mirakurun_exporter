@@ -3,14 +3,16 @@ package collector
 import (
 	"context"
 	"fmt"
-	"github.com/alecthomas/kingpin/v2"
-	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/nasshu2916/mirakurun_exporter/mirakurun"
 )
 
 const (
@@ -20,6 +22,13 @@ const (
 )
 
 type CollectorFactory func(ctx context.Context, client *mirakurun.Client, logger *slog.Logger) Collector
+
+type metricDefinition struct {
+	name       string
+	help       string
+	labelNames []string
+	metricType prometheus.ValueType
+}
 
 var (
 	factories        = make(map[string]CollectorFactory)
