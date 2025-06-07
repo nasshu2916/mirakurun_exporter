@@ -2,11 +2,12 @@ package mirakurun
 
 import (
 	"context"
-	"github.com/nasshu2916/mirakurun_exporter/util"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/nasshu2916/mirakurun_exporter/util"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,9 @@ func TestStatus(t *testing.T) {
 	srv := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(responseBody))
+			if _, err := w.Write([]byte(responseBody)); err != nil {
+				t.Errorf("failed to write response: %v", err)
+			}
 		}),
 	)
 	defer srv.Close()
