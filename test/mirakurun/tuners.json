@@ -1,0 +1,93 @@
+[
+  {
+    "index": 0,
+    "name": "Tuner (Terrestrial) #1",
+    "types": [
+      "GR"
+    ],
+    "command": null,
+    "pid": null,
+    "users": [],
+    "isAvailable": true,
+    "isRemote": false,
+    "isFree": true,
+    "isUsing": false,
+    "isFault": false
+  },
+  {
+    "index": 1,
+    "name": "Tuner (Terrestrial) #2",
+    "types": [
+      "GR"
+    ],
+    "command": "recisdb tune --device /dev/pt3video3 --channel T27 -",
+    "pid": 5978,
+    "users": [
+      {
+        "id": "192.168.1.10:53833",
+        "priority": 0,
+        "url": "/api/channels/GR/T27/stream?decode=1",
+        "disableDecoder": false,
+        "streamSetting": {
+          "channel": {
+            "name": "NHK総合・東京",
+            "type": "GR",
+            "channel": "T27",
+            "commandVars": {
+              "satellite": " "
+            }
+          },
+          "networkId": 32736,
+          "parseEIT": true
+        },
+        "streamInfo": {
+          "0": {
+            "packet": 10,
+            "drop": 0
+          },
+          "16": {
+            "packet": 20,
+            "drop": 0
+          }
+        }
+      }
+    ],
+    "isAvailable": true,
+    "isRemote": false,
+    "isFree": false,
+    "isUsing": true,
+    "isFault": false
+  },
+  {
+    "index": 2,
+    "name": "Tuner (Satellite) #1",
+    "types": [
+      "BS",
+      "CS"
+    ],
+    "command": null,
+    "pid": null,
+    "users": [],
+    "isAvailable": true,
+    "isRemote": false,
+    "isFree": true,
+    "isUsing": false,
+    "isFault": false
+  },
+  {
+    "index": 3,
+    "name": "Tuner (Satellite) #2",
+    "types": [
+      "BS",
+      "CS"
+    ],
+    "command": null,
+    "pid": null,
+    "users": [],
+    "isAvailable": true,
+    "isRemote": false,
+    "isFree": true,
+    "isUsing": false,
+    "isFault": false
+  }
+]

@@ -1,0 +1,48 @@
+[
+  {
+    "id": 3273601024,
+    "serviceId": 1024,
+    "networkId": 32736,
+    "name": "ＮＨＫ総合１・東京",
+    "type": 1,
+    "logoId": 0,
+    "remoteControlKeyId": 1,
+    "epgReady": true,
+    "epgUpdatedAt": 1749000000000,
+    "channel": {
+      "type": "GR",
+      "channel": "T27"
+    },
+    "hasLogoData": true
+  },
+  {
+    "id": 400101,
+    "serviceId": 101,
+    "networkId": 4,
+    "name": "ＮＨＫ　ＢＳ",
+    "type": 1,
+    "logoId": -1,
+    "epgReady": true,
+    "epgUpdatedAt": 1749000000000,
+    "channel": {
+      "type": "BS",
+      "channel": "BS15_0"
+    },
+    "hasLogoData": false
+  },
+  {
+    "id": 400102,
+    "serviceId": 102,
+    "networkId": 4,
+    "name": "ＮＨＫ　ＢＳ",
+    "type": 1,
+    "logoId": -1,
+    "epgReady": true,
+    "epgUpdatedAt": 1749000000000,
+    "channel": {
+      "type": "BS",
+      "channel": "BS15_0"
+    },
+    "hasLogoData": false
+  }
+]

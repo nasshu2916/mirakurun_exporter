@@ -1,0 +1,123 @@
+[
+  {
+    "name": "NHK総合・東京",
+    "type": "GR",
+    "channel": "T27",
+    "commandVars": {
+      "satellite": " "
+    },
+    "services": [
+      {
+        "id": 3273601024,
+        "serviceId": 1024,
+        "networkId": 32736,
+        "name": "ＮＨＫ総合１・東京",
+        "type": 1
+      },
+      {
+        "id": 3273601025,
+        "serviceId": 1025,
+        "networkId": 32736,
+        "name": "ＮＨＫ総合２・東京",
+        "type": 1
+      },
+      {
+        "id": 3273601408,
+        "serviceId": 1408,
+        "networkId": 32736,
+        "name": "ＮＨＫ携帯Ｇ・東京",
+        "type": 192
+      }
+    ]
+  },
+  {
+    "name": "BS15/TS0",
+    "type": "BS",
+    "channel": "BS15_0",
+    "commandVars": {
+      "satellite": " --tsid 16625 "
+    },
+    "services": [
+      {
+        "id": 400101,
+        "serviceId": 101,
+        "networkId": 4,
+        "name": "ＮＨＫ　ＢＳ",
+        "type": 1
+      },
+      {
+        "id": 400102,
+        "serviceId": 102,
+        "networkId": 4,
+        "name": "ＮＨＫ　ＢＳ",
+        "type": 1
+      },
+      {
+        "id": 400700,
+        "serviceId": 700,
+        "networkId": 4,
+        "name": "ＮＨＫデータ１",
+        "type": 192
+      },
+      {
+        "id": 400701,
+        "serviceId": 701,
+        "networkId": 4,
+        "name": "ＮＨＫデータ２",
+        "type": 192
+      },
+      {
+        "id": 400707,
+        "serviceId": 707,
+        "networkId": 4,
+        "name": "７０７チャンネル",
+        "type": 192
+      },
+      {
+        "id": 400929,
+        "serviceId": 929,
+        "networkId": 4,
+        "name": "Ｄｐａダウンロード",
+        "type": 164
+      }
+    ]
+  },
+  {
+    "name": "ND02",
+    "type": "CS",
+    "channel": "CS02",
+    "commandVars": {
+      "satellite": " "
+    },
+    "services": [
+      {
+        "id": 600296,
+        "serviceId": 296,
+        "networkId": 6,
+        "name": "ＴＢＳチャンネル１",
+        "type": 1
+      },
+      {
+        "id": 600298,
+        "serviceId": 298,
+        "networkId": 6,
+        "name": "テレ朝チャンネル１",
+        "type": 1
+      },
+      {
+        "id": 600299,
+        "serviceId": 299,
+        "networkId": 6,
+        "name": "テレ朝チャンネル２",
+        "type": 1
+      },
+      {
+        "id": 600339,
+        "serviceId": 339,
+        "networkId": 6,
+        "name": "ディズニージュニア",
+        "type": 1
+      }
+    ]
+  }
+]

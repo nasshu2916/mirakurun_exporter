@@ -1,0 +1,34 @@
+[
+  {
+    "key": "EPG.Gatherer",
+    "name": "EPG Gatherer",
+    "id": "MBGOCIW0.3001",
+    "status": "finished",
+    "retryCount": 0,
+    "isAborting": false,
+    "createdAt": 1749380000000,
+    "updatedAt": 1749380000001,
+    "duration": 1,
+    "startedAt": 1749380000000,
+    "hasAborted": false,
+    "hasSkipped": false,
+    "hasFailed": false,
+    "finishedAt": 1749381000000
+  },
+  {
+    "key": "Program.GC",
+    "name": "Program GC",
+    "id": "MBGOCIW0.3002",
+    "status": "finished",
+    "retryCount": 0,
+    "isAborting": false,
+    "createdAt": 1749375000000,
+    "updatedAt": 1749375000001,
+    "duration": 2,
+    "startedAt": 1749375000000,
+    "hasAborted": false,
+    "hasSkipped": false,
+    "hasFailed": false,
+    "finishedAt": 1749376000001
+  }
+]

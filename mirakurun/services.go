@@ -8,23 +8,25 @@ import (
 )
 
 type ServicesResponse []struct {
-	ID                 int64  `json:"id"`
-	ServiceID          int    `json:"serviceId"`
-	NetworkID          int    `json:"networkId"`
-	Name               string `json:"name"`
-	Type               int    `json:"type"`
-	LogoID             int    `json:"logoId"`
-	HasLogoData        bool   `json:"hasLogoData"`
-	RemoteControlKeyID int    `json:"remoteControlKeyId"`
-	EpgReady           bool   `json:"epgReady"`
-	EpgUpdatedAt       int64  `json:"epgUpdatedAt"`
-	Channel            struct {
-		Type      string                 `json:"type"`
-		Channel   string                 `json:"channel"`
-		Name      string                 `json:"name"`
-		TsmfRelTs int                    `json:"tsmfRelTs"`
-		Services  map[string]interface{} `json:"services"`
-	} `json:"channel"`
+	ID                 int64          `json:"id"`
+	ServiceID          int            `json:"serviceId"`
+	NetworkID          int            `json:"networkId"`
+	Name               string         `json:"name"`
+	Type               int            `json:"type"`
+	LogoID             int            `json:"logoId"`
+	HasLogoData        bool           `json:"hasLogoData"`
+	RemoteControlKeyID int            `json:"remoteControlKeyId"`
+	EpgReady           bool           `json:"epgReady"`
+	EpgUpdatedAt       int64          `json:"epgUpdatedAt"`
+	Channel            ServiceChannel `json:"channel"`
+}
+
+type ServiceChannel struct {
+	Type      string                 `json:"type"`
+	Channel   string                 `json:"channel"`
+	Name      string                 `json:"name"`
+	TsmfRelTs int                    `json:"tsmfRelTs"`
+	Services  map[string]interface{} `json:"services"`
 }
 
 func (c *Client) GetServices(ctx context.Context, logger *slog.Logger) (*ServicesResponse, error) {
